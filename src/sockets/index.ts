@@ -8,26 +8,46 @@ export const bootstrapSockets = (server: HttpServer) => {
     },
   });
 
-  io.on("connection", (socket) => {
-    console.log("New client connected");
+  let bookingInfo: Record<string, { day: string; time: string }> = {};
 
+  const getBookingInfoForSocket = (socketId: string) => {
+    return bookingInfo[socketId];
+  };
+
+  io.on("connection", async (socket) => {
     const room = "appointments";
-    socket.join(room);
+    await socket.join(room);
 
-    const clientsInRoom = io.sockets.adapter.rooms.get(room);
-    console.log(
-      `Number of users in room ${room}: ${
-        clientsInRoom ? clientsInRoom.size : 0
-      }`
-    );
+    const data = Object.values(bookingInfo);
+    if (data.length > 0) {
+      data.forEach((bookingInfo) => {
+        socket.emit("booking confirmed", bookingInfo.day, bookingInfo.time);
+      });
+    }
 
-    socket.on("disconnect", () => {
-      console.log("Client disconnected");
-      console.log(
-        `Number of users in room ${room}: ${
-          clientsInRoom ? clientsInRoom.size : 0
-        }`
-      );
+    // const clientsInRoom = io.sockets.adapter.rooms.get(room);
+
+    socket.on("booking", (day: string, hour: string) => {
+      io.emit("booking confirmed", day, hour);
+      delete bookingInfo[socket.id];
+      bookingInfo[socket.id] = { day: day, time: hour };
+    });
+
+    socket.on("cancel booking", (day: string, hour: string) => {
+      io.emit("booking cancelled", day, hour);
+      delete bookingInfo[socket.id];
+    });
+
+    socket.on("reservation", (day: string, hour: string, title: string) => {
+      io.emit("reservation confirmed", day, hour, title);
+    });
+
+    socket.on("disconnect", async () => {
+      const booking = getBookingInfoForSocket(socket.id);
+      if (booking) {
+        io.emit("booking cancelled", booking.day, booking.time);
+        delete bookingInfo[socket.id];
+      }
     });
   });
 };

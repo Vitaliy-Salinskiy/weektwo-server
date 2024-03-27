@@ -1,6 +1,5 @@
 import dotenv from "dotenv";
 import express from "express";
-import { Request, Response } from "express";
 import http from "http";
 import cors from "cors";
 
@@ -21,10 +20,6 @@ const PORT = process.env.PORT || 5000;
 const server = http.createServer(app);
 
 bootstrapSockets(server);
-
-app.get("/", (_req: Request, res: Response) => {
-  res.send("Hello World!");
-});
 
 const bootstrap = async () => {
   try {
