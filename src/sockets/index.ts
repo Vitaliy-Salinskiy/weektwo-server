@@ -1,5 +1,6 @@
 import { Server as HttpServer } from "http";
 import { Server as IOServer } from "socket.io";
+import { User } from "../interfaces";
 
 export const bootstrapSockets = (server: HttpServer) => {
   const io = new IOServer(server, {
@@ -25,8 +26,6 @@ export const bootstrapSockets = (server: HttpServer) => {
       });
     }
 
-    // const clientsInRoom = io.sockets.adapter.rooms.get(room);
-
     socket.on("booking", (day: string, hour: string) => {
       io.emit("booking confirmed", day, hour);
       delete bookingInfo[socket.id];
@@ -38,9 +37,13 @@ export const bootstrapSockets = (server: HttpServer) => {
       delete bookingInfo[socket.id];
     });
 
-    socket.on("reservation", (day: string, hour: string, title: string) => {
-      io.emit("reservation confirmed", day, hour, title);
-    });
+    socket.on(
+      "reservation",
+      (day: string, hour: string, title: string, user: User) => {
+        delete bookingInfo[socket.id];
+        io.emit("reservation confirmed", day, hour, title, user);
+      }
+    );
 
     socket.on("disconnect", async () => {
       const booking = getBookingInfoForSocket(socket.id);
